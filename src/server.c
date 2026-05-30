@@ -30,11 +30,9 @@ int start_server(int port)
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(port);
 
-    if (bind(
-            server_fd,
-            (struct sockaddr *)&server_addr,
-            sizeof(server_addr)
-        ) == SOCKET_ERROR)
+    if (bind(server_fd,
+             (struct sockaddr *)&server_addr,
+             sizeof(server_addr)) == SOCKET_ERROR)
     {
         printf("Bind failed\n");
 
@@ -87,20 +85,36 @@ int start_server(int port)
             printf("%s\n", buffer);
             printf("========================\n");
 
-            const char *html = route_request(buffer);
+            RouteResult route = route_request(buffer);
 
             char response[8192];
 
-            snprintf(
-                response,
-                sizeof(response),
-                "HTTP/1.1 200 OK\r\n"
-                "Content-Type: text/html\r\n"
-                "Connection: close\r\n"
-                "\r\n"
-                "%s",
-                html
-            );
+            if (route.status_code == 200)
+            {
+                snprintf(
+                    response,
+                    sizeof(response),
+                    "HTTP/1.1 200 OK\r\n"
+                    "Content-Type: text/html\r\n"
+                    "Connection: close\r\n"
+                    "\r\n"
+                    "%s",
+                    route.html
+                );
+            }
+            else
+            {
+                snprintf(
+                    response,
+                    sizeof(response),
+                    "HTTP/1.1 404 Not Found\r\n"
+                    "Content-Type: text/html\r\n"
+                    "Connection: close\r\n"
+                    "\r\n"
+                    "%s",
+                    route.html
+                );
+            }
 
             send(
                 client_socket,
