@@ -1,9 +1,39 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <winsock2.h>
 
 #include "server.h"
 #include "router.h"
+
+static char* read_file(const char* path)
+{
+    FILE* file = fopen(path, "rb");
+
+    if (!file)
+    {
+        return NULL;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    rewind(file);
+
+    char* content = malloc(size + 1);
+
+    if (!content)
+    {
+        fclose(file);
+        return NULL;
+    }
+
+    fread(content, 1, size, file);
+    content[size] = '\0';
+
+    fclose(file);
+
+    return content;
+}
 
 int start_server(int port)
 {
@@ -31,24 +61,16 @@ int start_server(int port)
     server_addr.sin_port = htons(port);
 
     if (bind(server_fd,
-             (struct sockaddr *)&server_addr,
+             (struct sockaddr*)&server_addr,
              sizeof(server_addr)) == SOCKET_ERROR)
     {
         printf("Bind failed\n");
-
-        closesocket(server_fd);
-        WSACleanup();
-
         return 1;
     }
 
     if (listen(server_fd, 5) == SOCKET_ERROR)
     {
         printf("Listen failed\n");
-
-        closesocket(server_fd);
-        WSACleanup();
-
         return 1;
     }
 
@@ -64,7 +86,6 @@ int start_server(int port)
 
         if (client_socket == INVALID_SOCKET)
         {
-            printf("Accept failed\n");
             continue;
         }
 
@@ -81,47 +102,50 @@ int start_server(int port)
         {
             buffer[bytes_received] = '\0';
 
-            printf("\n===== HTTP REQUEST =====\n");
-            printf("%s\n", buffer);
-            printf("========================\n");
-
             RouteResult route = route_request(buffer);
 
-            char response[8192];
+            char* html = read_file(route.file_path);
 
-            if (route.status_code == 200)
+            if (html)
             {
-                snprintf(
-                    response,
-                    sizeof(response),
-                    "HTTP/1.1 200 OK\r\n"
-                    "Content-Type: text/html\r\n"
-                    "Connection: close\r\n"
-                    "\r\n"
-                    "%s",
-                    route.html
-                );
-            }
-            else
-            {
-                snprintf(
-                    response,
-                    sizeof(response),
-                    "HTTP/1.1 404 Not Found\r\n"
-                    "Content-Type: text/html\r\n"
-                    "Connection: close\r\n"
-                    "\r\n"
-                    "%s",
-                    route.html
-                );
-            }
+                char response[16384];
 
-            send(
-                client_socket,
-                response,
-                (int)strlen(response),
-                0
-            );
+                if (route.status_code == 200)
+                {
+                    snprintf(
+                        response,
+                        sizeof(response),
+                        "HTTP/1.1 200 OK\r\n"
+                        "Content-Type: text/html\r\n"
+                        "Connection: close\r\n"
+                        "\r\n"
+                        "%s",
+                        html
+                    );
+                }
+                else
+                {
+                    snprintf(
+                        response,
+                        sizeof(response),
+                        "HTTP/1.1 404 Not Found\r\n"
+                        "Content-Type: text/html\r\n"
+                        "Connection: close\r\n"
+                        "\r\n"
+                        "%s",
+                        html
+                    );
+                }
+
+                send(
+                    client_socket,
+                    response,
+                    (int)strlen(response),
+                    0
+                );
+
+                free(html);
+            }
         }
 
         closesocket(client_socket);

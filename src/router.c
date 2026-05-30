@@ -8,57 +8,26 @@ RouteResult route_request(const char *request)
     if (strstr(request, "GET / ") != NULL)
     {
         result.status_code = 200;
-        result.html =
-            "<!DOCTYPE html>"
-            "<html>"
-            "<body>"
-            "<h1>Home Page</h1>"
-            "<p>Welcome to Shawarma Web Server.</p>"
-            "</body>"
-            "</html>";
-
+        result.file_path = "public/index.html";
         return result;
     }
 
     if (strstr(request, "GET /about ") != NULL)
     {
         result.status_code = 200;
-        result.html =
-            "<!DOCTYPE html>"
-            "<html>"
-            "<body>"
-            "<h1>About Page</h1>"
-            "<p>This is the about page.</p>"
-            "</body>"
-            "</html>";
-
+        result.file_path = "public/about.html";
         return result;
     }
 
     if (strstr(request, "GET /contact ") != NULL)
     {
         result.status_code = 200;
-        result.html =
-            "<!DOCTYPE html>"
-            "<html>"
-            "<body>"
-            "<h1>Contact Page</h1>"
-            "<p>contact@shawarma.local</p>"
-            "</body>"
-            "</html>";
-
+        result.file_path = "public/contact.html";
         return result;
     }
 
     result.status_code = 404;
-    result.html =
-        "<!DOCTYPE html>"
-        "<html>"
-        "<body>"
-        "<h1>404 Not Found</h1>"
-        "<p>The requested page does not exist.</p>"
-        "</body>"
-        "</html>";
+    result.file_path = "public/404.html";
 
     return result;
 }
