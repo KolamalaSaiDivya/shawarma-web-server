@@ -2,7 +2,7 @@ CC = gcc
 
 CFLAGS = -Wall -Wextra
 
-SRC = src/main.c src/server.c
+SRC = src/main.c src/server.c src/router.c
 
 TARGET = sws
 

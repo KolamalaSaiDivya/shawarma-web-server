@@ -3,6 +3,7 @@
 #include <winsock2.h>
 
 #include "server.h"
+#include "router.h"
 
 int start_server(int port)
 {
@@ -29,9 +30,11 @@ int start_server(int port)
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(port);
 
-    if (bind(server_fd,
-             (struct sockaddr *)&server_addr,
-             sizeof(server_addr)) == SOCKET_ERROR)
+    if (bind(
+            server_fd,
+            (struct sockaddr *)&server_addr,
+            sizeof(server_addr)
+        ) == SOCKET_ERROR)
     {
         printf("Bind failed\n");
 
@@ -55,9 +58,7 @@ int start_server(int port)
 
     while (1)
     {
-        SOCKET client_socket;
-
-        client_socket = accept(
+        SOCKET client_socket = accept(
             server_fd,
             NULL,
             NULL
@@ -68,8 +69,6 @@ int start_server(int port)
             printf("Accept failed\n");
             continue;
         }
-
-        printf("\nClient connected!\n");
 
         char buffer[4096];
 
@@ -87,30 +86,29 @@ int start_server(int port)
             printf("\n===== HTTP REQUEST =====\n");
             printf("%s\n", buffer);
             printf("========================\n");
+
+            const char *html = route_request(buffer);
+
+            char response[8192];
+
+            snprintf(
+                response,
+                sizeof(response),
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: text/html\r\n"
+                "Connection: close\r\n"
+                "\r\n"
+                "%s",
+                html
+            );
+
+            send(
+                client_socket,
+                response,
+                (int)strlen(response),
+                0
+            );
         }
-
-        const char *response =
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Type: text/html\r\n"
-            "Connection: close\r\n"
-            "\r\n"
-            "<!DOCTYPE html>"
-            "<html>"
-            "<head>"
-            "<title>Shawarma Web Server</title>"
-            "</head>"
-            "<body>"
-            "<h1>Hello from Shawarma Web Server!</h1>"
-            "<p>Your first web server is working.</p>"
-            "</body>"
-            "</html>";
-
-        send(
-            client_socket,
-            response,
-            strlen(response),
-            0
-        );
 
         closesocket(client_socket);
     }
