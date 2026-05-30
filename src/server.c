@@ -1,10 +1,8 @@
 #include <stdio.h>
-#include <stdlib.h>
+#include <string.h>
 #include <winsock2.h>
 
 #include "server.h"
-
-#pragma comment(lib, "ws2_32.lib")
 
 int start_server(int port)
 {
@@ -36,41 +34,86 @@ int start_server(int port)
              sizeof(server_addr)) == SOCKET_ERROR)
     {
         printf("Bind failed\n");
+
         closesocket(server_fd);
         WSACleanup();
+
         return 1;
     }
 
     if (listen(server_fd, 5) == SOCKET_ERROR)
     {
         printf("Listen failed\n");
+
         closesocket(server_fd);
         WSACleanup();
+
         return 1;
     }
 
     printf("Shawarma Web Server listening on port %d\n", port);
 
     while (1)
-{
-    SOCKET client_socket;
-
-    client_socket = accept(
-        server_fd,
-        NULL,
-        NULL
-    );
-
-    if (client_socket == INVALID_SOCKET)
     {
-        printf("Accept failed\n");
-        continue;
+        SOCKET client_socket;
+
+        client_socket = accept(
+            server_fd,
+            NULL,
+            NULL
+        );
+
+        if (client_socket == INVALID_SOCKET)
+        {
+            printf("Accept failed\n");
+            continue;
+        }
+
+        printf("\nClient connected!\n");
+
+        char buffer[4096];
+
+        int bytes_received = recv(
+            client_socket,
+            buffer,
+            sizeof(buffer) - 1,
+            0
+        );
+
+        if (bytes_received > 0)
+        {
+            buffer[bytes_received] = '\0';
+
+            printf("\n===== HTTP REQUEST =====\n");
+            printf("%s\n", buffer);
+            printf("========================\n");
+        }
+
+        const char *response =
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/html\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+            "<!DOCTYPE html>"
+            "<html>"
+            "<head>"
+            "<title>Shawarma Web Server</title>"
+            "</head>"
+            "<body>"
+            "<h1>Hello from Shawarma Web Server!</h1>"
+            "<p>Your first web server is working.</p>"
+            "</body>"
+            "</html>";
+
+        send(
+            client_socket,
+            response,
+            strlen(response),
+            0
+        );
+
+        closesocket(client_socket);
     }
-
-    printf("Client connected!\n");
-
-    closesocket(client_socket);
-}
 
     closesocket(server_fd);
     WSACleanup();

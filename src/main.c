@@ -1,6 +1,6 @@
 #include "server.h"
 
-int main()
+int main(void)
 {
     start_server(8080);
     return 0;

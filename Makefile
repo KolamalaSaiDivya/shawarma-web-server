@@ -1,11 +1,13 @@
-CC=gcc
+CC = gcc
 
-CFLAGS=-Wall -Wextra
+CFLAGS = -Wall -Wextra
 
-SRC=src/main.c src/server.c
+SRC = src/main.c src/server.c
+
+TARGET = sws
 
 all:
-	$(CC) $(CFLAGS) $(SRC) -o sws -lws2_32
+	$(CC) $(CFLAGS) $(SRC) -o $(TARGET) -lws2_32
 
 clean:
-	rm -f sws.exe sws
+	rm -f $(TARGET) $(TARGET).exe
