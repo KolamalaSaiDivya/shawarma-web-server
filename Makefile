@@ -6,6 +6,8 @@ SRC = src/main.c src/server.c src/router.c
 
 TARGET = sws
 
+src/mime.c
+
 all:
 	$(CC) $(CFLAGS) $(SRC) -o $(TARGET) -lws2_32
 

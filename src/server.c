@@ -5,6 +5,7 @@
 
 #include "server.h"
 #include "router.h"
+#include "mime.h"
 
 static char* read_file(const char* path)
 {
@@ -60,17 +61,27 @@ int start_server(int port)
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(port);
 
-    if (bind(server_fd,
-             (struct sockaddr*)&server_addr,
-             sizeof(server_addr)) == SOCKET_ERROR)
+    if (bind(
+            server_fd,
+            (struct sockaddr*)&server_addr,
+            sizeof(server_addr)
+        ) == SOCKET_ERROR)
     {
         printf("Bind failed\n");
+
+        closesocket(server_fd);
+        WSACleanup();
+
         return 1;
     }
 
     if (listen(server_fd, 5) == SOCKET_ERROR)
     {
         printf("Listen failed\n");
+
+        closesocket(server_fd);
+        WSACleanup();
+
         return 1;
     }
 
@@ -86,29 +97,39 @@ int start_server(int port)
 
         if (client_socket == INVALID_SOCKET)
         {
+            printf("Accept failed\n");
             continue;
         }
 
-        char buffer[4096];
+        char request_buffer[4096];
 
         int bytes_received = recv(
             client_socket,
-            buffer,
-            sizeof(buffer) - 1,
+            request_buffer,
+            sizeof(request_buffer) - 1,
             0
         );
 
         if (bytes_received > 0)
         {
-            buffer[bytes_received] = '\0';
+            request_buffer[bytes_received] = '\0';
 
-            RouteResult route = route_request(buffer);
+            printf("\n===== HTTP REQUEST =====\n");
+            printf("%s\n", request_buffer);
+            printf("========================\n");
 
-            char* html = read_file(route.file_path);
+            RouteResult route =
+                route_request(request_buffer);
 
-            if (html)
+            char* file_content =
+                read_file(route.file_path);
+
+            if (file_content)
             {
-                char response[16384];
+                const char* mime_type =
+                    get_mime_type(route.file_path);
+
+                char response[32768];
 
                 if (route.status_code == 200)
                 {
@@ -116,11 +137,12 @@ int start_server(int port)
                         response,
                         sizeof(response),
                         "HTTP/1.1 200 OK\r\n"
-                        "Content-Type: text/html\r\n"
+                        "Content-Type: %s\r\n"
                         "Connection: close\r\n"
                         "\r\n"
                         "%s",
-                        html
+                        mime_type,
+                        file_content
                     );
                 }
                 else
@@ -129,11 +151,12 @@ int start_server(int port)
                         response,
                         sizeof(response),
                         "HTTP/1.1 404 Not Found\r\n"
-                        "Content-Type: text/html\r\n"
+                        "Content-Type: %s\r\n"
                         "Connection: close\r\n"
                         "\r\n"
                         "%s",
-                        html
+                        mime_type,
+                        file_content
                     );
                 }
 
@@ -144,7 +167,23 @@ int start_server(int port)
                     0
                 );
 
-                free(html);
+                free(file_content);
+            }
+            else
+            {
+                const char* response =
+                    "HTTP/1.1 500 Internal Server Error\r\n"
+                    "Content-Type: text/plain\r\n"
+                    "Connection: close\r\n"
+                    "\r\n"
+                    "Unable to read requested file.";
+
+                send(
+                    client_socket,
+                    response,
+                    (int)strlen(response),
+                    0
+                );
             }
         }
 
